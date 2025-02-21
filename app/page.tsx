@@ -1,101 +1,159 @@
-import Image from "next/image";
+import Link from "next/link";
+import { SiteHeader } from "@/components/site-header";
+import { SiteFooter } from "@/components/site-footer";
+import { Button } from "@/components/ui/button";
+import { ProductCard } from "@/components/product-card";
+import { Badge } from "@/components/ui/badge";
+
+// Interfaces para Strapi
+interface Product {
+  id: number;
+  attributes: {
+    name: string;
+    description: string;
+    price: number;
+    discountPrice?: number;
+    image: {
+      data: {
+        attributes: {
+          url: string;
+        };
+      };
+    };
+    featured: boolean;
+    slug: string;
+  };
+}
+
+// Datos de ejemplo - Reemplazar con datos de Strapi
+const featuredProducts = [
+  {
+    id: 1,
+    attributes: {
+      name: "Nike Air Max",
+      description: "Zapatillas deportivas premium",
+      price: 129.99,
+      image: {
+        data: {
+          attributes: {
+            url: "/placeholder.svg?height=400&width=400",
+          },
+        },
+      },
+      featured: true,
+      slug: "nike-air-max",
+    },
+  },
+  // ... más productos destacados
+];
+
+const discountedProducts = [
+  {
+    id: 2,
+    attributes: {
+      name: "Adidas Runner",
+      description: "Zapatillas para correr",
+      price: 99.99,
+      discountPrice: 79.99,
+      image: {
+        data: {
+          attributes: {
+            url: "/placeholder.svg?height=400&width=400",
+          },
+        },
+      },
+      featured: false,
+      slug: "adidas-runner",
+    },
+  },
+  // ... más productos con descuento
+];
 
 export default function Home() {
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+    <div className="relative flex min-h-screen flex-col">
+      <SiteHeader />
+      <main className="flex-1">
+        {/* Hero Section */}
+        <section className="container grid lg:grid-cols-2 gap-8 py-8 md:py-12">
+          <div className="flex flex-col justify-center space-y-4">
+            <h1 className="text-3xl font-bold tracking-tighter sm:text-5xl xl:text-6xl/none">
+              Tu estilo, tu deporte, tu vida
+            </h1>
+            <p className="max-w-[600px] text-muted-foreground md:text-xl">
+              Descubre nuestra colección exclusiva de ropa deportiva, tecnología
+              y más. Diseñado para los que buscan calidad y estilo en cada
+              momento.
+            </p>
+            <div className="flex flex-col gap-2 min-[400px]:flex-row">
+              <Button size="lg" className="w-full min-[400px]:w-auto" asChild>
+                <Link href="/categorias">Explorar categorías</Link>
+              </Button>
+              <Button
+                size="lg"
+                variant="outline"
+                className="w-full min-[400px]:w-auto"
+                asChild
+              >
+                <Link href="/categorias/descuentos">Ver ofertas</Link>
+              </Button>
+            </div>
+          </div>
+          <div className="hidden lg:block relative min-h-[400px]">
+            <div className="absolute inset-0">
+              <img
+                src="/public/home-image.jpg?height=400&width=600"
+                alt="Hero image"
+                className="object-cover w-full h-full rounded-lg"
+              />
+            </div>
+          </div>
+        </section>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
+        {/* Featured Products Section */}
+        <section className="container py-8 md:py-12">
+          <div className="flex flex-col gap-8">
+            <div className="flex flex-col gap-2">
+              <h2 className="text-2xl font-bold tracking-tighter sm:text-3xl">
+                Productos Destacados
+              </h2>
+              <p className="text-muted-foreground">
+                Descubre nuestra selección de productos más populares
+              </p>
+            </div>
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+              {featuredProducts.map((product) => (
+                <ProductCard key={product.id} product={product.attributes} />
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Latest Offers Section */}
+        <section className="container py-8 md:py-12">
+          <div className="flex flex-col gap-8">
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center gap-4">
+                <h2 className="text-2xl font-bold tracking-tighter sm:text-3xl">
+                  Últimas Ofertas
+                </h2>
+                <Badge variant="secondary" className="text-sm">
+                  Hasta 30% OFF
+                </Badge>
+              </div>
+              <p className="text-muted-foreground">
+                Aprovecha nuestros mejores descuentos
+              </p>
+            </div>
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+              {discountedProducts.map((product) => (
+                <ProductCard key={product.id} product={product.attributes} />
+              ))}
+            </div>
+          </div>
+        </section>
       </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+      <SiteFooter />
     </div>
   );
 }
