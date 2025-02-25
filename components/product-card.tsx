@@ -1,92 +1,79 @@
 "use client";
 
-import Link from "next/link";
-import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-} from "@/components/ui/card";
+import type React from "react";
+
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
-import { WhatsappIcon } from "@/components/icons";
-import { Badge } from "@/components/ui/badge";
 
 interface ProductCardProps {
   product: {
+    id: number;
     name: string;
     description: string;
     price: number;
-    discountPrice?: number;
-    image: {
-      data: {
-        attributes: {
-          url: string;
-        };
-      };
-    };
-    slug: string;
+    discountPrice?: number | null;
+    image?: {
+      url: string;
+    } | null;
   };
 }
 
-export function ProductCard({ product }: ProductCardProps) {
-  const handleWhatsAppClick = () => {
-    const message = `Hola, me interesa el producto: ${product.name} - $${
-      product.discountPrice || product.price
-    }`;
-    const whatsappUrl = `https://wa.me/1234567890?text=${encodeURIComponent(
+export default function ProductCard({ product }: ProductCardProps) {
+  const handleBuyClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    // Formatear mensaje para WhatsApp
+    const message = `Hola, estoy interesado en comprar: ${product.name}`;
+    const whatsappUrl = `https://wa.me/+123456789?text=${encodeURIComponent(
       message
     )}`;
+
+    // Abrir WhatsApp en una nueva pestaña
     window.open(whatsappUrl, "_blank");
   };
 
-  const discount = product.discountPrice
-    ? Math.round(
-        ((product.price - product.discountPrice) / product.price) * 100
-      )
-    : 0;
+  // Construir URL de imagen
+  const imageUrl = product.image?.url
+    ? `${process.env.PUBLIC_STRAPI_HOST}${product.image.url}`
+    : "/placeholder.svg?height=400&width=400";
 
   return (
-    <Card className="group">
-      <Link href={`/productos/${product.slug}`}>
-        <CardHeader className="p-0">
-          <div className="aspect-square overflow-hidden relative">
-            <img
-              src={product.image.data.attributes.url || "/placeholder.svg"}
-              alt={product.name}
-              className="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105"
-            />
-            {discount > 0 && (
-              <Badge className="absolute top-2 right-2 bg-red-500">
-                -{discount}%
-              </Badge>
+    <div className="bg-white rounded-lg overflow-hidden shadow-md transition-transform duration-300 hover:shadow-xl hover:-translate-y-1">
+      <div className="aspect-square relative">
+        <Image
+          src={imageUrl || "/placeholder.svg"}
+          alt={product.name || "Producto"}
+          fill
+          className="object-cover"
+        />
+      </div>
+      <div className="p-4">
+        <h3 className="text-lg font-semibold mb-2">{product.name}</h3>
+        <p className="text-gray-600 mb-4 line-clamp-2">{product.description}</p>
+        <div className="flex items-center justify-between">
+          <div>
+            {product.discountPrice ? (
+              <>
+                <span className="text-xl font-bold text-red-600">
+                  ${product.discountPrice}
+                </span>
+                <span className="text-sm text-gray-500 line-through ml-2">
+                  ${product.price}
+                </span>
+              </>
+            ) : (
+              <span className="text-xl font-bold">${product.price}</span>
             )}
           </div>
-        </CardHeader>
-        <CardContent className="p-4">
-          <h3 className="font-semibold mb-2 group-hover:text-primary transition-colors">
-            {product.name}
-          </h3>
-          <p className="text-sm text-muted-foreground line-clamp-2 mb-4">
-            {product.description}
-          </p>
-          <div className="flex items-baseline gap-2">
-            <span className="text-lg font-bold">
-              ${product.discountPrice || product.price}
-            </span>
-            {product.discountPrice && (
-              <span className="text-sm text-muted-foreground line-through">
-                ${product.price}
-              </span>
-            )}
-          </div>
-        </CardContent>
-      </Link>
-      <CardFooter className="p-4 pt-0">
-        <Button onClick={handleWhatsAppClick} className="w-full">
-          <WhatsappIcon className="w-4 h-4 mr-2" />
-          Comprar por WhatsApp
-        </Button>
-      </CardFooter>
-    </Card>
+          <Button
+            onClick={handleBuyClick}
+            className="bg-black hover:bg-gray-800 text-white"
+          >
+            Comprar
+          </Button>
+        </div>
+      </div>
+    </div>
   );
 }
