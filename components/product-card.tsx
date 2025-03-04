@@ -35,7 +35,9 @@ export default function ProductCard({ product }: ProductCardProps) {
 
   // Construir URL de imagen
   const imageUrl = product.image?.url
-    ? `${process.env.PUBLIC_STRAPI_HOST}${product.image.url}`
+    ? product.image.url.startsWith('http')
+      ? product.image.url
+      : `${process.env.NEXT_PUBLIC_STRAPI_HOST || process.env.STRAPI_HOST}${product.image.url}`
     : "/placeholder.svg?height=400&width=400";
 
   return (

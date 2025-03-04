@@ -45,15 +45,19 @@ export default async function DiscountPage() {
               // Intentar diferentes estructuras de datos para el producto
               const productData = {
                 id: product.id,
-                name: product.attributes?.name || "Producto",
-                description: product.attributes?.description || "",
-                price: product.attributes?.price || 0,
-                discountPrice: product.attributes?.discountPrice || null,
-                image: null,
+                name: product.name || product.attributes?.name || "Producto",
+                description: product.description || product.attributes?.description || "",
+                price: product.price || product.attributes?.price || 0,
+                discountPrice: product.discountPrice || product.attributes?.discountPrice || null,
+                image: null as { url: string } | null,
               };
 
               // Intentar diferentes estructuras para la imagen
-              if (product.attributes?.image?.data?.attributes?.url) {
+              if (product.image?.url) {
+                productData.image = {
+                  url: product.image.url,
+                };
+              } else if (product.attributes?.image?.data?.attributes?.url) {
                 productData.image = {
                   url: product.attributes.image.data.attributes.url,
                 };

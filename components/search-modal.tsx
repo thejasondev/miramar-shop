@@ -4,34 +4,90 @@ import { useState } from "react";
 import { Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
+import Image from "next/image";
+import Link from "next/link";
 
 interface SearchModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
+interface SearchResult {
+  id: number;
+  type: 'product' | 'category';
+  name: string;
+  description?: string;
+  image?: string;
+  url: string;
+}
+
 export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [results, setResults] = useState([]);
+  const [results, setResults] = useState<SearchResult[]>([]);
 
   const handleSearch = async (query: string) => {
-    if (!query) return;
+    if (!query || query.length < 2) {
+      setResults([]);
+      return;
+    }
 
     setIsLoading(true);
     try {
-      const response = await fetch(
-        `${process.env.STRAPI_HOST}/api/products?filters[title][$containsi]=${query}`,
+      // Buscar productos
+      const productsResponse = await fetch(
+        `${process.env.NEXT_PUBLIC_STRAPI_HOST}/api/products?filters[name][$containsi]=${query}&populate=image`,
         {
           headers: {
-            Authorization: `Bearer ${process.env.STRAPI_TOKEN}`,
+            Authorization: `Bearer ${process.env.NEXT_PUBLIC_STRAPI_TOKEN}`,
           },
         }
       );
-      const data = await response.json();
-      setResults(data.data || []);
+      const productsData = await productsResponse.json();
+      console.log("Productos encontrados:", productsData);
+
+      // Buscar categorías
+      const categoriesResponse = await fetch(
+        `${process.env.NEXT_PUBLIC_STRAPI_HOST}/api/categories?filters[name][$containsi]=${query}&populate=image`,
+        {
+          headers: {
+            Authorization: `Bearer ${process.env.NEXT_PUBLIC_STRAPI_TOKEN}`,
+          },
+        }
+      );
+      const categoriesData = await categoriesResponse.json();
+      console.log("Categorías encontradas:", categoriesData);
+
+      // Procesar resultados de productos
+      const productResults: SearchResult[] = (productsData.data || []).map((product: any) => {
+        const imageUrl = product.attributes?.image?.data?.attributes?.url || null;
+        return {
+          id: product.id,
+          type: 'product',
+          name: product.attributes?.name || "Producto",
+          description: product.attributes?.description || "",
+          image: imageUrl,
+          url: `/productos/${product.id}`
+        };
+      });
+
+      // Procesar resultados de categorías
+      const categoryResults: SearchResult[] = (categoriesData.data || []).map((category: any) => {
+        const imageUrl = category.attributes?.image?.data?.attributes?.url || null;
+        return {
+          id: category.id,
+          type: 'category',
+          name: category.attributes?.name || "Categoría",
+          description: category.attributes?.description || "",
+          image: imageUrl,
+          url: `/categorias/${category.id}`
+        };
+      });
+
+      // Combinar resultados
+      setResults([...productResults, ...categoryResults]);
     } catch (error) {
-      console.error("Error searching products:", error);
+      console.error("Error al buscar:", error);
     } finally {
       setIsLoading(false);
     }
@@ -50,13 +106,14 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
             <Search className="h-5 w-5 text-gray-400" />
             <Input
               type="search"
-              placeholder="Buscar productos..."
+              placeholder="Buscar productos o categorías..."
               className="flex-1 ml-2 border-none focus:ring-0"
               value={searchQuery}
               onChange={(e) => {
                 setSearchQuery(e.target.value);
                 handleSearch(e.target.value);
               }}
+              autoFocus
             />
           </div>
           <button
@@ -68,22 +125,48 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
           </button>
         </div>
 
-        <div className="mt-4">
+        <div className="mt-4 max-h-[70vh] overflow-y-auto">
           {isLoading ? (
-            <p className="text-center text-gray-500">Buscando...</p>
+            <div className="flex justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-black"></div>
+            </div>
           ) : results.length > 0 ? (
-            <ul className="space-y-2">
-              {results.map((product: any) => (
-                <li key={product.id} className="p-2 hover:bg-gray-50 rounded">
-                  <a href={`/productos/${product.id}`} onClick={onClose}>
-                    {product.attributes.title}
-                  </a>
-                </li>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {results.map((result) => (
+                <Link 
+                  key={`${result.type}-${result.id}`} 
+                  href={result.url}
+                  onClick={onClose}
+                  className="flex items-center p-3 rounded-lg border hover:bg-gray-50 transition-colors"
+                >
+                  {result.image && (
+                    <div className="w-16 h-16 relative mr-3 flex-shrink-0">
+                      <Image
+                        src={result.image.startsWith('http') 
+                          ? result.image 
+                          : `${process.env.NEXT_PUBLIC_STRAPI_HOST}${result.image}`}
+                        alt={result.name}
+                        fill
+                        className="object-cover rounded"
+                      />
+                    </div>
+                  )}
+                  <div>
+                    <h3 className="font-medium">{result.name}</h3>
+                    <p className="text-sm text-gray-500 line-clamp-1">
+                      {result.type === 'product' ? 'Producto' : 'Categoría'}
+                    </p>
+                  </div>
+                </Link>
               ))}
-            </ul>
-          ) : searchQuery ? (
-            <p className="text-center text-gray-500">
-              No se encontraron resultados
+            </div>
+          ) : searchQuery.length >= 2 ? (
+            <p className="text-center text-gray-500 py-8">
+              No se encontraron resultados para "{searchQuery}"
+            </p>
+          ) : searchQuery.length > 0 ? (
+            <p className="text-center text-gray-500 py-8">
+              Escribe al menos 2 caracteres para buscar
             </p>
           ) : null}
         </div>

@@ -23,7 +23,6 @@ export default async function CategoriesPage() {
               let imageUrl = "/placeholder.svg?height=300&width=500";
               let categoryName = "Categoría";
               let categoryDescription = "";
-
               if (category.attributes) {
                 categoryName = category.attributes.name || "Categoría";
                 categoryDescription = category.attributes.description || "";

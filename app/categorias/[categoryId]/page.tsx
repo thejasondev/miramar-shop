@@ -16,9 +16,9 @@ export async function generateMetadata({ params }: PageProps) {
   };
 }
 
-export default async function CategoryProductsPage({ params }: PageProps) {
-  // Asegurarnos de que params sea tratado como asíncrono
-  const { categoryId } = params;
+export default async function CategoryProductsPage(props: PageProps) {
+  // Acceder a los parámetros de forma correcta
+  const categoryId = props.params.categoryId;
   console.log("Category ID:", categoryId);
 
   const products = await getProductsByCategory(categoryId);
@@ -42,22 +42,23 @@ export default async function CategoryProductsPage({ params }: PageProps) {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {products.map((product: any) => {
               console.log("Processing product:", product.id);
-
+              
               // Intentar diferentes estructuras de datos para el producto
               const productData = {
                 id: product.id,
-                name:
-                  product.attributes?.name ||
-                  product.attributes?.title ||
-                  "Producto",
-                description: product.attributes?.description || "",
-                price: product.attributes?.price || 0,
-                discountPrice: product.attributes?.discountPrice || null,
-                image: null,
+                name: product.name || product.attributes?.name || "Producto",
+                description: product.description || product.attributes?.description || "",
+                price: product.price || product.attributes?.price || 0,
+                discountPrice: product.discountPrice || product.attributes?.discountPrice || null,
+                image: null as { url: string } | null,
               };
 
               // Intentar diferentes estructuras para la imagen
-              if (product.attributes?.image?.data?.attributes?.url) {
+              if (product.image?.url) {
+                productData.image = {
+                  url: product.image.url,
+                };
+              } else if (product.attributes?.image?.data?.attributes?.url) {
                 productData.image = {
                   url: product.attributes.image.data.attributes.url,
                 };
