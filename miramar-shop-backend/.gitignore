@@ -129,3 +129,24 @@ dist
 build
 .strapi-updater.json
 .strapi-cloud.json
+
+# Dependencies
+node_modules
+.pnp
+.pnp.js
+
+# Environment
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Build
+.next
+build
+dist
+
+# Misc
+.DS_Store
+*.pem

@@ -10,31 +10,45 @@ export default async function HomePage() {
 
   try {
     homeContent = await getHomeContent();
-    console.log("Home content:", homeContent);
+    console.log("Home content in page:", {
+      title: homeContent?.title || 'No title',
+      description: homeContent?.description ? 'Description present' : 'No description',
+      cover: homeContent?.cover ? 'Cover present' : 'No cover'
+    });
+    
+    // Verificar la estructura completa del homeContent
+    console.log("Home content structure FULL in page:", JSON.stringify(homeContent));
+    
+    // Verificar la estructura de la imagen de portada
+    if (homeContent?.cover) {
+      console.log("Cover structure in page FULL:", JSON.stringify(homeContent.cover));
+    } else {
+      console.log("No cover field in homeContent");
+    }
   } catch (error) {
     console.error("Error al cargar el contenido de inicio:", error);
     homeContent = {
-      title: "Bienvenido a Miramar Shop",
-      description:
-        "Tu tienda deportiva de confianza. Explora nuestras categorías y encuentra los mejores productos para tu deporte favorito.",
-      heroImage: null,
+      title: null,
+      description: null,
+      cover: null
     };
   }
 
   try {
     categories = await getCategories();
-    console.log("Categories:", categories);
+    console.log("Categories count:", categories?.length || 0);
   } catch (error) {
     console.error("Error al cargar las categorías:", error);
     categories = [];
   }
 
+  // Pasar los datos directamente al componente Hero
   return (
     <div className="pt-16">
       <Hero
         title={homeContent?.title}
         description={homeContent?.description}
-        heroImage={homeContent?.heroImage}
+        heroImage={homeContent?.cover}
       />
       <FeaturedCategories categories={categories} />
       <CallToAction />

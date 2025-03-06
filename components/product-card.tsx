@@ -16,16 +16,23 @@ interface ProductCardProps {
       url: string;
     } | null;
   };
+  onBuyClick?: (product: any) => void;
 }
 
-export default function ProductCard({ product }: ProductCardProps) {
+export default function ProductCard({ product, onBuyClick }: ProductCardProps) {
   const handleBuyClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
 
-    // Formatear mensaje para WhatsApp
-    const message = `Hola, estoy interesado en comprar: ${product.name}`;
-    const whatsappUrl = `https://wa.me/+123456789?text=${encodeURIComponent(
+    // Si se proporciona una función onBuyClick personalizada, usarla
+    if (onBuyClick) {
+      onBuyClick(product);
+      return;
+    }
+
+    // Comportamiento predeterminado: abrir WhatsApp
+    const message = `Hola, estoy interesado en comprar: ${product.name}, ${product.description}`;
+    const whatsappUrl = `https://wa.me/+5353118193?text=${encodeURIComponent(
       message
     )}`;
 

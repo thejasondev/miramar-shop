@@ -1,4 +1,4 @@
-import { X } from "lucide-react";
+import { X, Store } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 
@@ -16,7 +16,10 @@ export default function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
       )}
     >
       <div className="flex items-center justify-between p-4 border-b">
-        <span className="text-xl font-bold">Miramar Shop</span>
+        <span className="text-xl font-bold flex items-center">
+          <Store className="h-5 w-5 mr-2" />
+          Miramar Shop
+        </span>
         <button
           onClick={onClose}
           className="hover:text-gray-600 transition-colors"
@@ -52,6 +55,24 @@ export default function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
               onClick={onClose}
             >
               Descuento
+            </Link>
+          </li>
+          <li>
+            <Link
+              href="/sobre-nosotros"
+              className="text-lg font-medium hover:text-gray-600 transition-colors block"
+              onClick={onClose}
+            >
+              Sobre Nosotros
+            </Link>
+          </li>
+          <li>
+            <Link
+              href="/faq"
+              className="text-lg font-medium hover:text-gray-600 transition-colors block"
+              onClick={onClose}
+            >
+              Preguntas Frecuentes
             </Link>
           </li>
         </ul>

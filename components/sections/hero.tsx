@@ -1,60 +1,37 @@
-import Image from "next/image";
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
+import HeroClient from "./hero-client";
 
 interface HeroProps {
-  title?: string;
-  description?: string;
+  title?: string | null;
+  description?: string | any[] | null;
   heroImage?: any;
 }
 
 export default function Hero({
-  title = "Bienvenido a Miramar Shop",
-  description = "Tu tienda deportiva de confianza. Explora nuestras categorías y encuentra los mejores productos para tu deporte favorito.",
+  title,
+  description,
   heroImage,
 }: HeroProps) {
-  // Intentar diferentes estructuras de datos para la imagen
-  let imageUrl = "/home-image.jpg?height=600&width=600";
-
+  // Verificar los datos recibidos
+  console.log("Hero server component received:", {
+    title: title ? title : 'No title',
+    description: description ? (typeof description === 'object' ? 'Complex object' : 'Simple string') : 'No description',
+    heroImage: heroImage ? 'Image present' : 'No image'
+  });
+  
+  // Mostrar más detalles sobre la imagen
   if (heroImage) {
-    if (heroImage.data?.attributes?.url) {
-      imageUrl = `${process.env.STRAPI_HOST}${heroImage.data.attributes.url}`;
-    } else if (heroImage.url) {
-      imageUrl = `${process.env.STRAPI_HOST}${heroImage.url}`;
+    console.log("Hero image in server component:", 
+      typeof heroImage === 'object' 
+        ? `Object with keys: ${Object.keys(heroImage).join(', ')}` 
+        : typeof heroImage
+    );
+    
+    // Verificar si la imagen tiene una URL
+    if (heroImage.url) {
+      console.log("Image URL in server component:", heroImage.url);
     }
   }
-
-  console.log("Hero image URL:", imageUrl);
-
-  return (
-    <section className="py-12 md:py-20">
-      <div className="container mx-auto px-4">
-        <div className="grid md:grid-cols-2 gap-8 items-center">
-          <div className="text-center md:text-left">
-            <h1 className="text-4xl md:text-5xl font-bold mb-4">{title}</h1>
-            <p className="text-lg text-gray-700 mb-8">{description}</p>
-            <Link href="/categorias">
-              <Button
-                size="lg"
-                className="bg-black hover:bg-gray-800 text-white"
-              >
-                Explorar productos
-              </Button>
-            </Link>
-          </div>
-
-          <div className="hidden md:block">
-            <Image
-              src={imageUrl || "/home-image.jpg"}
-              alt="Miramar Shop"
-              width={600}
-              height={600}
-              className="rounded-lg object-cover"
-              priority
-            />
-          </div>
-        </div>
-      </div>
-    </section>
-  );
+  
+  // Pasar los datos al componente de cliente
+  return <HeroClient title={title} description={description} heroImage={heroImage} />;
 }

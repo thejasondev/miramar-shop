@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Menu, Search } from "lucide-react";
+import { Menu, Search, Store } from "lucide-react";
 import { cn } from "@/lib/utils";
 import SearchModal from "./search-modal";
 import MobileMenu from "./mobile-menu";
@@ -28,12 +28,12 @@ export default function Header() {
           <Link
             href="/"
             className={cn(
-              "text-xl font-bold",
-              "lg:text-2xl",
+              "text-xl font-bold flex items-center",
               isMobileMenuOpen && "hidden lg:block"
             )}
           >
-            Miramar Shop
+            <Store className="h-6 w-6 mr-2" />
+            <span>Miramar Shop</span>
           </Link>
 
           {/* Desktop Navigation */}
@@ -55,6 +55,12 @@ export default function Header() {
               className="text-sm font-medium hover:text-gray-600 transition-colors"
             >
               Descuento
+            </Link>
+            <Link
+              href="/sobre-nosotros"
+              className="text-sm font-medium hover:text-gray-600 transition-colors"
+            >
+              Sobre Nosotros
             </Link>
           </nav>
 
