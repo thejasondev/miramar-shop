@@ -17,7 +17,7 @@ export default function HeroClient({
   heroImage,
 }: HeroClientProps) {
   const [imageError, setImageError] = useState(false);
-  const [imageUrl, setImageUrl] = useState("/home-image.jpg");
+  const [imageUrl, setImageUrl] = useState("/hero.jpg");
   const [processedDescription, setProcessedDescription] = useState<string>("");
   
   // Procesar la imagen cuando cambie heroImage
