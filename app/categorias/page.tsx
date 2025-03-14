@@ -28,14 +28,14 @@ export default async function CategoriesPage() {
                 categoryDescription = category.attributes.description || "";
 
                 if (category.attributes.image?.data?.attributes?.url) {
-                  imageUrl = `${process.env.STRAPI_HOST}${category.attributes.image.data.attributes.url}`;
+                  imageUrl = `${process.env.NEXT_PUBLIC_STRAPI_HOST}${category.attributes.image.data.attributes.url}`;
                 }
               } else if (category.name) {
                 categoryName = category.name;
                 categoryDescription = category.description || "";
 
                 if (category.image?.url) {
-                  imageUrl = `${process.env.STRAPI_HOST}${category.image.url}`;
+                  imageUrl = `${process.env.NEXT_PUBLIC_STRAPI_HOST}${category.image.url}`;
                 }
               }
 

@@ -1,7 +1,7 @@
 export async function getFaqs() {
   try {
     // Usar fetch directamente con la URL completa y el token hardcodeado
-    const strapiHost = process.env.STRAPI_HOST || 'http://localhost:1337';
+    const strapiHost = process.env.NEXT_PUBLIC_STRAPI_HOST || 'http://localhost:1337';
     const strapiToken = "3a00d21bd74155346d76384e0f1f5134bd6849a0d9c721ac84717b88c7ecfde602a01b61a72734e055167b98edd5c342648e6c9cdbcf01ea1d5eec66a31054434e62bda0ca54daa3962ea08d482a8dd72505329eec08a88c12f4685473fd52ec03238ebcf0075a67ce851b105378574277386d7dfaa46a992f42f2a1dcd8ae7b";
     
     console.log("Using STRAPI_HOST for FAQs:", strapiHost);
@@ -53,8 +53,8 @@ export async function getFaqs() {
 export async function getHomeContent() {
   try {
     // Usar fetch directamente con la URL completa para evitar problemas con variables de entorno
-    const strapiHost = process.env.STRAPI_HOST || 'http://localhost:1337';
-    const strapiToken = process.env.STRAPI_TOKEN;
+    const strapiHost = process.env.NEXT_PUBLIC_STRAPI_HOST || 'http://localhost:1337';
+    const strapiToken = process.env.NEXT_PUBLIC_STRAPI_TOKEN;
     
     console.log("Using STRAPI_HOST:", strapiHost);
     
@@ -119,10 +119,10 @@ export async function getHomeContent() {
 export async function getCategories() {
   try {
     const response = await fetch(
-      `${process.env.STRAPI_HOST}/api/categories?populate=*`,
+      `${process.env.NEXT_PUBLIC_STRAPI_HOST}/api/categories?populate=*`,
       {
         headers: {
-          Authorization: `Bearer ${process.env.STRAPI_TOKEN}`,
+          Authorization: `Bearer ${process.env.NEXT_PUBLIC_STRAPI_TOKEN}`,
         },
         cache: "no-store",
       }
@@ -145,16 +145,16 @@ export async function getProductsByCategory(categoryId: string) {
     // Intentar diferentes endpoints y estructuras
     const endpoints = [
       // 1. Productos filtrados por categoría
-      `${process.env.STRAPI_HOST}/api/products?filters[category][id][$eq]=${categoryId}&populate=*`,
+      `${process.env.NEXT_PUBLIC_STRAPI_HOST}/api/products?filters[category][id][$eq]=${categoryId}&populate=*`,
 
       // 2. Productos filtrados por categoría (estructura alternativa)
-      `${process.env.STRAPI_HOST}/api/products?filters[categories][id][$eq]=${categoryId}&populate=*`,
+      `${process.env.NEXT_PUBLIC_STRAPI_HOST}/api/products?filters[categories][id][$eq]=${categoryId}&populate=*`,
 
       // 3. Obtener la categoría con sus productos relacionados
-      `${process.env.STRAPI_HOST}/api/categories/${categoryId}?populate[products][populate]=*`,
+      `${process.env.NEXT_PUBLIC_STRAPI_HOST}/api/categories/${categoryId}?populate[products][populate]=*`,
 
       // 4. Obtener la categoría con sus productos relacionados (estructura alternativa)
-      `${process.env.STRAPI_HOST}/api/categories/${categoryId}?populate=products.image`,
+      `${process.env.NEXT_PUBLIC_STRAPI_HOST}/api/categories/${categoryId}?populate=products.image`,
     ];
 
     let products = [];
@@ -167,7 +167,7 @@ export async function getProductsByCategory(categoryId: string) {
 
         const response = await fetch(endpoint, {
           headers: {
-            Authorization: `Bearer ${process.env.STRAPI_TOKEN}`,
+            Authorization: `Bearer ${process.env.NEXT_PUBLIC_STRAPI_TOKEN}`,
             "Content-Type": "application/json",
           },
           cache: "no-store",
@@ -230,10 +230,10 @@ export async function getProductsByCategory(categoryId: string) {
 export async function getDiscountedProducts() {
   try {
     const response = await fetch(
-      `${process.env.STRAPI_HOST}/api/products?filters[discountPrice][$notNull]=true&populate=*`,
+      `${process.env.NEXT_PUBLIC_STRAPI_HOST}/api/products?filters[discountPrice][$notNull]=true&populate=*`,
       {
         headers: {
-          Authorization: `Bearer ${process.env.STRAPI_TOKEN}`,
+          Authorization: `Bearer ${process.env.NEXT_PUBLIC_STRAPI_TOKEN}`,
         },
         cache: "no-store",
       }
