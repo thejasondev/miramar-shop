@@ -8,10 +8,9 @@ import HydrationErrorSuppressor from "@/components/hydration-error-suppressor";
 
 const inter = Inter({ subsets: ["latin"] });
 
-// Estas metadatas deben estar en un archivo separado ya que este componente ahora es un cliente
 export const metadata: Metadata = {
   title: "Miramar Shop",
-  description: "Tu tienda deportiva de confianza",
+  description: "Tu tienda todo en uno de confianza",
 };
 
 export default function RootLayout({
