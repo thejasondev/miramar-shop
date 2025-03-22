@@ -92,7 +92,7 @@ export default function FaqClientPage() {
   return (
     <div className="pt-16">
       <div className="container mx-auto px-4 py-12">
-        <h1 className="text-3xl font-bold mb-8">Preguntas Frecuentes</h1>
+        <h1 className="text-3xl font-bold mb-8 text-center">Preguntas Frecuentes</h1>
 
         {loading ? (
           <div className="flex justify-center py-12">

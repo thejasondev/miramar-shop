@@ -2,7 +2,7 @@ export async function getFaqs() {
   try {
     // Usar fetch directamente con la URL completa y el token hardcodeado
     const strapiHost = process.env.NEXT_PUBLIC_STRAPI_HOST || 'http://localhost:1337';
-    const strapiToken = "3a00d21bd74155346d76384e0f1f5134bd6849a0d9c721ac84717b88c7ecfde602a01b61a72734e055167b98edd5c342648e6c9cdbcf01ea1d5eec66a31054434e62bda0ca54daa3962ea08d482a8dd72505329eec08a88c12f4685473fd52ec03238ebcf0075a67ce851b105378574277386d7dfaa46a992f42f2a1dcd8ae7b";
+    const strapiToken = process.env.NEXT_PUBLIC_STRAPI_TOKEN;
     
     console.log("Using STRAPI_HOST for FAQs:", strapiHost);
     
