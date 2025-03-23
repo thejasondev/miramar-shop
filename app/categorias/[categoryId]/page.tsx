@@ -27,7 +27,7 @@ export default async function CategoryProductsPage(props: PageProps) {
   return (
     <div className="pt-16">
       <div className="container mx-auto px-4 py-12">
-        <h1 className="text-3xl font-bold mb-8">Productos</h1>
+        <h1 className="text-3xl font-bold text-center mb-8">Productos</h1>
 
         {!Array.isArray(products) || products.length === 0 ? (
           <div className="text-center py-12">
