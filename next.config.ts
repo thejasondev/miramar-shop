@@ -3,12 +3,16 @@ const nextConfig = {
   images: {
     remotePatterns: [
       {
-        protocol: 'https',
-        hostname: 'res.cloudinary.com',
+        protocol: "https",
+        hostname: "res.cloudinary.com",
       },
       {
-        protocol: 'https',
-        hostname: 'miramar-shop-production.up.railway.app',
+        protocol: "https",
+        hostname: "miramar-shop-production.up.railway.app",
+      },
+      {
+        protocol: "https",
+        hostname: "tu-strapi-vercel-app.vercel.app",
       },
     ],
   },
@@ -17,15 +21,15 @@ const nextConfig = {
   },
   experimental: {
     serverActions: {
-      bodySizeLimit: '2mb'
-    }
+      bodySizeLimit: "2mb",
+    },
   },
   eslint: {
-    ignoreDuringBuilds: true
+    ignoreDuringBuilds: true,
   },
   typescript: {
-    ignoreBuildErrors: true
-  }
+    ignoreBuildErrors: true,
+  },
 };
 
 module.exports = nextConfig;

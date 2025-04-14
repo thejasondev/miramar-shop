@@ -8,6 +8,7 @@
     "deploy": "strapi deploy",
     "develop": "strapi develop",
     "start": "strapi start",
+    "vercel-build": "strapi build",
     "strapi": "strapi"
   },
   "dependencies": {
