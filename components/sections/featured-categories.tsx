@@ -70,14 +70,41 @@ export default function FeaturedCategories({
       categoryDescription = category.attributes.description || "";
 
       if (category.attributes.image?.data?.attributes?.url) {
-        imageUrl = `${process.env.NEXT_PUBLIC_STRAPI_HOST}${category.attributes.image.data.attributes.url}`;
+        const imgUrl = category.attributes.image.data.attributes.url;
+
+        // Verificar si la URL es absoluta o relativa
+        if (imgUrl.startsWith("http://") || imgUrl.startsWith("https://")) {
+          imageUrl = imgUrl;
+        } else {
+          imageUrl = `${process.env.NEXT_PUBLIC_STRAPI_HOST}${imgUrl}`;
+        }
       }
     } else if (category.name) {
       categoryName = category.name;
       categoryDescription = category.description || "";
 
-      if (category.image?.url) {
-        imageUrl = `${process.env.NEXT_PUBLIC_STRAPI_HOST}${category.image.url}`;
+      if (category.image) {
+        if (typeof category.image === "string") {
+          // Si la imagen es directamente una cadena de URL
+          if (
+            category.image.startsWith("http://") ||
+            category.image.startsWith("https://")
+          ) {
+            imageUrl = category.image;
+          } else {
+            imageUrl = `${process.env.NEXT_PUBLIC_STRAPI_HOST}${category.image}`;
+          }
+        } else if (category.image.url) {
+          // Si la imagen es un objeto con una URL
+          if (
+            category.image.url.startsWith("http://") ||
+            category.image.url.startsWith("https://")
+          ) {
+            imageUrl = category.image.url;
+          } else {
+            imageUrl = `${process.env.NEXT_PUBLIC_STRAPI_HOST}${category.image.url}`;
+          }
+        }
       }
     }
 
@@ -97,12 +124,8 @@ export default function FeaturedCategories({
             />
           </div>
           <div className="p-4 flex-grow">
-            <h3 className="text-xl font-semibold mb-2">
-              {categoryName}
-            </h3>
-            <p className="text-gray-600 line-clamp-2">
-              {categoryDescription}
-            </p>
+            <h3 className="text-xl font-semibold mb-2">{categoryName}</h3>
+            <p className="text-gray-600 line-clamp-2">{categoryDescription}</p>
           </div>
         </div>
       </Link>
@@ -115,14 +138,14 @@ export default function FeaturedCategories({
         <h2 className="text-3xl font-bold mb-8 text-center">
           Nuestras Categorías
         </h2>
-        
+
         {Array.isArray(categories) && categories.length > 0 ? (
           <div className="relative px-10">
             {/* Botones de navegación personalizados */}
             <div className="swiper-button-prev absolute left-0 top-1/2 transform -translate-y-1/2 z-10 bg-white rounded-full w-10 h-10 shadow-md cursor-pointer flex items-center justify-center hover:bg-gray-100 transition-colors">
               <ChevronLeft className="h-5 w-5 text-gray-700" />
             </div>
-            
+
             {/* Carrusel de categorías */}
             {mounted && (
               <div className="relative">
@@ -133,12 +156,12 @@ export default function FeaturedCategories({
                     </SwiperSlide>
                   ))}
                 </Swiper>
-                
+
                 {/* Indicador de paginación personalizado */}
                 <div className="swiper-pagination"></div>
               </div>
             )}
-            
+
             {/* Botones de navegación personalizados */}
             <div className="swiper-button-next absolute right-0 top-1/2 transform -translate-y-1/2 z-10 bg-white rounded-full w-10 h-10 shadow-md cursor-pointer flex items-center justify-center hover:bg-gray-100 transition-colors">
               <ChevronRight className="h-5 w-5 text-gray-700" />
@@ -151,7 +174,7 @@ export default function FeaturedCategories({
             </p>
           </div>
         )}
-        
+
         <div className="text-center mt-12">
           <Link href="/categorias">
             <Button

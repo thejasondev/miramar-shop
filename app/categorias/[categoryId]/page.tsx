@@ -1,7 +1,9 @@
+import { getProductsByCategory, getCategories } from "@/lib/api";
+import ProductGrid from "@/components/product-grid";
+import { Metadata } from "next";
+import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { getProductsByCategory } from "@/lib/api";
-import ProductCard from "@/components/product-card";
 
 interface PageProps {
   params: {
@@ -9,63 +11,72 @@ interface PageProps {
   };
 }
 
-export async function generateMetadata({ params }: PageProps) {
+export async function generateMetadata(props: PageProps): Promise<Metadata> {
+  // Extraer categoryId de forma segura
+  const categoryId = props.params.categoryId;
+
+  // Intentar obtener las categorías para encontrar la actual
+  const categories = await getCategories();
+  const category = categories.find((cat) => cat.id.toString() === categoryId);
+
   return {
-    title: "Productos | Miramar Shop",
-    description: "Explora nuestros productos por categoría",
+    title: category
+      ? `${category.name} | Miramar Shop`
+      : "Categoría | Miramar Shop",
+    description:
+      category?.description ||
+      "Explora nuestra selección de productos en esta categoría.",
   };
 }
 
 export default async function CategoryProductsPage(props: PageProps) {
-  // Acceder a los parámetros de forma correcta
+  // Extraer categoryId de forma segura
   const categoryId = props.params.categoryId;
+
   console.log("Category ID:", categoryId);
 
+  // Obtener todas las categorías para encontrar la actual
+  const categories = await getCategories();
+  const category = categories.find((cat) => cat.id.toString() === categoryId);
+
+  // Intentar obtener los productos para esta categoría
   const products = await getProductsByCategory(categoryId);
-  console.log("Products found:", products?.length || 0);
+  console.log("Products found:", products.length);
+
+  // Si no existe la categoría, mostrar 404
+  if (!category) {
+    console.error(`Categoría con ID ${categoryId} no encontrada`);
+    notFound();
+  }
 
   return (
     <div className="pt-16">
-      <div className="container mx-auto px-4 py-12">
-        <h1 className="text-3xl font-bold text-center mb-8">Productos</h1>
-
-        {!Array.isArray(products) || products.length === 0 ? (
-          <div className="text-center py-12">
-            <h2 className="text-xl font-medium mb-4">
-              No hay productos disponibles en esta categoría
-            </h2>
-            <Link href="/categorias">
-              <Button variant="outline">Volver a categorías</Button>
-            </Link>
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex justify-between items-center mb-6">
+          <div>
+            <h1 className="text-3xl font-bold">{category.name}</h1>
+            {category.description && (
+              <p className="text-gray-600 mt-2">{category.description}</p>
+            )}
           </div>
+          <Link href="/categorias">
+            <Button variant="outline">Todas las categorías</Button>
+          </Link>
+        </div>
+
+        {products.length > 0 ? (
+          <ProductGrid products={products} />
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {products.map((product: any) => {
-              console.log("Processing product:", product.id);
-              
-              // Intentar diferentes estructuras de datos para el producto
-              const productData = {
-                id: product.id,
-                name: product.name || product.attributes?.name || "Producto",
-                description: product.description || product.attributes?.description || "",
-                price: product.price || product.attributes?.price || 0,
-                discountPrice: product.discountPrice || product.attributes?.discountPrice || null,
-                image: null as { url: string } | null,
-              };
-
-              // Intentar diferentes estructuras para la imagen
-              if (product.image?.url) {
-                productData.image = {
-                  url: product.image.url,
-                };
-              } else if (product.attributes?.image?.data?.attributes?.url) {
-                productData.image = {
-                  url: product.attributes.image.data.attributes.url,
-                };
-              }
-
-              return <ProductCard key={product.id} product={productData} />;
-            })}
+          <div className="text-center py-12 bg-gray-50 rounded-lg">
+            <h2 className="text-xl font-semibold mb-4">
+              No hay productos en esta categoría
+            </h2>
+            <p className="text-gray-600 mb-6">
+              Pronto agregaremos nuevos productos. ¡Vuelve a visitarnos pronto!
+            </p>
+            <Link href="/categorias">
+              <Button>Ver otras categorías</Button>
+            </Link>
           </div>
         )}
       </div>

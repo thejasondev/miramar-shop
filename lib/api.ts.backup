@@ -1,0 +1,963 @@
+// Definiciones de tipos
+export interface Category {
+  id: number;
+  name: string;
+  slug: string;
+}
+
+export interface ImageType {
+  url: string;
+  width: number;
+  height: number;
+}
+
+export interface Price {
+  id: number;
+  size: string;
+  price: number;
+}
+
+export interface Product {
+  id: number;
+  name: string;
+  slug: string;
+  description: string;
+  image: ImageType | null;
+  categories: Category[];
+  prices: Price[];
+}
+
+export async function getFaqs() {
+  try {
+    // Usar fetch directamente con la URL completa y el token hardcodeado
+    const strapiHost =
+      process.env.NEXT_PUBLIC_STRAPI_HOST || "http://localhost:1337";
+    const strapiToken = process.env.NEXT_PUBLIC_STRAPI_TOKEN;
+
+    console.log("Using STRAPI_HOST for FAQs:", strapiHost);
+
+    const response = await fetch(`${strapiHost}/api/faqs?populate=*`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${strapiToken}`,
+      },
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      throw new Error(`Error fetching FAQs: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log(
+      "FAQs raw data:",
+      JSON.stringify(data).substring(0, 200) + "..."
+    );
+
+    // Verificar la estructura de los datos
+    if (!data || !data.data || !Array.isArray(data.data)) {
+      console.error("Invalid data structure from Strapi for FAQs:", data);
+      throw new Error("Invalid data structure from Strapi for FAQs");
+    }
+
+    console.log(`Found ${data.data.length} FAQs`);
+
+    // Verificar la estructura del primer FAQ si existe
+    if (data.data.length > 0) {
+      const firstFaq = data.data[0];
+      console.log("First FAQ structure:", {
+        id: firstFaq.id,
+        question: firstFaq.question || "No question field directly",
+        answer: firstFaq.answer || "No answer field directly",
+      });
+    }
+
+    return data.data || [];
+  } catch (error) {
+    console.error("Error fetching FAQs:", error);
+    return [];
+  }
+}
+
+export async function getHomeContent() {
+  try {
+    // Usar fetch directamente con la URL completa para evitar problemas con variables de entorno
+    const strapiHost =
+      process.env.NEXT_PUBLIC_STRAPI_HOST || "http://localhost:1337";
+    const strapiToken = process.env.NEXT_PUBLIC_STRAPI_TOKEN;
+
+    console.log("Using STRAPI_HOST:", strapiHost);
+
+    const response = await fetch(`${strapiHost}/api/home?populate=*`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${strapiToken}`,
+      },
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      throw new Error(`Error fetching home content: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log(
+      "Home content raw data:",
+      JSON.stringify(data).substring(0, 200) + "..."
+    );
+
+    // Verificar la estructura de los datos
+    if (!data || !data.data) {
+      console.error("Invalid data structure from Strapi:", data);
+      throw new Error("Invalid data structure from Strapi");
+    }
+
+    // Extraer los datos de la respuesta - maneja ambas estructuras posibles
+    const homeData = data.data.attributes || data.data;
+
+    console.log("Home data fields:", Object.keys(homeData));
+
+    // Procesar y sacar la URL de la imagen correctamente
+    let coverImage = null;
+
+    // Estructura 1: imagen en Strapi v4+
+    if (homeData.Imagen && homeData.Imagen.data) {
+      const imgAttributes = homeData.Imagen.data.attributes;
+      if (imgAttributes && imgAttributes.url) {
+        // Ya es una URL completa de Cloudinary (como https://res.cloudinary.com/...)
+        coverImage = {
+          url: imgAttributes.url,
+          width: imgAttributes.width,
+          height: imgAttributes.height,
+          formats: imgAttributes.formats || {},
+        };
+      }
+    }
+    // Estructura 2: imagen directa
+    else if (homeData.Imagen && homeData.Imagen.url) {
+      coverImage = homeData.Imagen;
+    }
+    // Estructura 3: campo cover
+    else if (homeData.cover) {
+      if (homeData.cover.data && homeData.cover.data.attributes) {
+        const imgAttributes = homeData.cover.data.attributes;
+        coverImage = {
+          url: imgAttributes.url,
+          width: imgAttributes.width,
+          height: imgAttributes.height,
+          formats: imgAttributes.formats || {},
+        };
+      } else {
+        coverImage = homeData.cover;
+      }
+    }
+
+    if (coverImage) {
+      console.log("Cover image processed:", {
+        url: coverImage.url,
+        width: coverImage.width,
+        height: coverImage.height,
+      });
+    } else {
+      console.log("No cover image found in any expected format");
+    }
+
+    // Devolver los datos procesados con los nombres de campos correctos
+    return {
+      title: homeData.Title || homeData.title || "Miramar Shop",
+      description:
+        homeData.Description ||
+        homeData.description ||
+        "Tu tienda online favorita",
+      cover: coverImage,
+    };
+  } catch (error) {
+    console.error("Error fetching home content:", error);
+    // Devolver un objeto vacío con la estructura esperada
+    return {
+      title: "Miramar Shop",
+      description: "Tu tienda online favorita",
+      cover: null,
+    };
+  }
+}
+
+export async function getCategories() {
+  try {
+    const strapiHost =
+      process.env.NEXT_PUBLIC_STRAPI_HOST || "http://localhost:1337";
+    const strapiToken = process.env.NEXT_PUBLIC_STRAPI_TOKEN;
+
+    // Intentar diferentes nombres posibles de colección, incluyendo Categorías con acento
+    const possibleEndpoints = [
+      `${strapiHost}/api/categorias?populate=*`,
+      `${strapiHost}/api/categorías?populate=*`, // Con acento
+      `${strapiHost}/api/categories?populate=*`,
+      `${strapiHost}/api/category?populate=*`,
+      `${strapiHost}/api/categoria?populate=*`,
+    ];
+
+    // IMPORTANTE: Probar directamente la colección "Categorías" exactamente como la creaste
+    possibleEndpoints.unshift(`${strapiHost}/api/categorías?populate=imagen`);
+
+    let data = null;
+    let successEndpoint = "";
+
+    // Intentar cada endpoint hasta encontrar uno que funcione
+    for (const endpoint of possibleEndpoints) {
+      try {
+        console.log(`Intentando obtener categorías desde: ${endpoint}`);
+
+        const response = await fetch(endpoint, {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${strapiToken}`,
+          },
+          cache: "no-store",
+        });
+
+        if (response.ok) {
+          data = await response.json();
+          successEndpoint = endpoint;
+          console.log(`✅ Éxito al obtener categorías desde: ${endpoint}`);
+          break;
+        } else {
+          console.log(`❌ Error ${response.status} al intentar: ${endpoint}`);
+        }
+      } catch (error) {
+        console.log(`Error al intentar ${endpoint}:`, error);
+      }
+    }
+
+    if (!data) {
+      console.error("No se pudo obtener categorías de ningún endpoint");
+      return [];
+    }
+
+    console.log(`Categorías encontradas en: ${successEndpoint}`);
+    console.log(
+      "Estructura de la respuesta:",
+      JSON.stringify(data).substring(0, 200) + "..."
+    );
+
+    if (!data.data) {
+      console.error("Respuesta sin propiedad 'data':", data);
+      return [];
+    }
+
+    // Transformar los datos para que coincidan con la estructura esperada
+    const categories = data.data.map((category) => {
+      // Imprimir la categoría completa para depuración
+      console.log(
+        "Categoría completa:",
+        JSON.stringify(category).substring(0, 300)
+      );
+
+      // Los datos pueden estar directamente en el objeto o en attributes
+      const attributes = category.attributes || {};
+
+      console.log("Atributos:", JSON.stringify(attributes).substring(0, 300));
+      console.log("Campos disponibles en categoría:", Object.keys(attributes));
+
+      // Obtener el nombre directamente - intentamos acceder desde ambos lugares
+      let categoryName = "Categoría sin nombre";
+      if (category.nombre) {
+        categoryName = category.nombre;
+        console.log(`Encontrado nombre directo en categoría: ${categoryName}`);
+      } else if (attributes.nombre) {
+        categoryName = attributes.nombre;
+        console.log(`Encontrado nombre en attributes: ${categoryName}`);
+      } else if (category.Nombre) {
+        categoryName = category.Nombre;
+      } else if (attributes.Nombre) {
+        categoryName = attributes.Nombre;
+      } else if (category.name) {
+        categoryName = category.name;
+      } else if (attributes.name) {
+        categoryName = attributes.name;
+      } else if (category.Name) {
+        categoryName = category.Name;
+      } else if (attributes.Name) {
+        categoryName = attributes.Name;
+      }
+
+      // Lo mismo para la descripción
+      let categoryDescription = "";
+      if (category.descripcion) {
+        categoryDescription = category.descripcion;
+        console.log(`Encontrada descripción directa: ${categoryDescription}`);
+      } else if (attributes.descripcion) {
+        categoryDescription = attributes.descripcion;
+      } else if (category.Descripcion) {
+        categoryDescription = category.Descripcion;
+      } else if (attributes.Descripcion) {
+        categoryDescription = attributes.Descripcion;
+      } else if (category.description) {
+        categoryDescription = category.description;
+      } else if (attributes.description) {
+        categoryDescription = attributes.description;
+      } else if (category.Description) {
+        categoryDescription = category.Description;
+      } else if (attributes.Description) {
+        categoryDescription = attributes.Description;
+      }
+
+      // El slug puede estar en diferentes formatos también
+      let categorySlug = `categoria-${category.id}`;
+      if (category.Slug) {
+        categorySlug = category.Slug;
+        console.log(`Encontrado slug directo: ${categorySlug}`);
+      } else if (category.slug) {
+        categorySlug = category.slug;
+      } else if (attributes.slug) {
+        categorySlug = attributes.slug;
+      } else if (attributes.Slug) {
+        categorySlug = attributes.Slug;
+      }
+
+      // Crea un objeto con la estructura esperada
+      const processedCategory = {
+        id: category.id,
+        name: categoryName,
+        description: categoryDescription,
+        slug: categorySlug,
+        image: null,
+      };
+
+      // Procesar imagen correctamente - explorar todas las posibles fuentes de imágenes
+      if (category.imagen) {
+        console.log(
+          "Campo 'imagen' encontrado directamente:",
+          JSON.stringify(category.imagen).substring(0, 300)
+        );
+
+        if (typeof category.imagen === "string") {
+          // Es una URL directa
+          processedCategory.image = {
+            url: category.imagen,
+          };
+          console.log(`Imagen encontrada (URL directa): ${category.imagen}`);
+        } else if (category.imagen?.data?.attributes?.url) {
+          // Estructura Strapi v4 anidada
+          const imgUrl = category.imagen.data.attributes.url;
+          processedCategory.image = {
+            url: imgUrl,
+          };
+          console.log(`Imagen encontrada en datos anidados: ${imgUrl}`);
+        } else if (category.imagen?.url) {
+          // Objeto con URL
+          processedCategory.image = {
+            url: category.imagen.url,
+          };
+          console.log(`Imagen encontrada (objeto): ${category.imagen.url}`);
+        }
+      } else if (attributes.imagen) {
+        console.log(
+          "Campo 'imagen' encontrado en attributes:",
+          JSON.stringify(attributes.imagen).substring(0, 300)
+        );
+
+        if (attributes.imagen.data && attributes.imagen.data.attributes) {
+          // Nueva estructura Strapi v4
+          const imgAttributes = attributes.imagen.data.attributes;
+          processedCategory.image = {
+            url: imgAttributes.url,
+            width: imgAttributes.width,
+            height: imgAttributes.height,
+          };
+          console.log(`Imagen encontrada (v4): ${imgAttributes.url}`);
+        } else if (attributes.imagen.url) {
+          // Estructura directa
+          processedCategory.image = {
+            url: attributes.imagen.url,
+          };
+          console.log(`Imagen encontrada (directa): ${attributes.imagen.url}`);
+        }
+      } else if (attributes.Imagen) {
+        // Similar pero con mayúscula
+        console.log(
+          "Campo 'Imagen' encontrado:",
+          JSON.stringify(attributes.Imagen).substring(0, 300)
+        );
+        if (attributes.Imagen.data && attributes.Imagen.data.attributes) {
+          const imgAttributes = attributes.Imagen.data.attributes;
+          processedCategory.image = {
+            url: imgAttributes.url,
+            width: imgAttributes.width,
+            height: imgAttributes.height,
+          };
+          console.log(`Imagen encontrada (v4): ${imgAttributes.url}`);
+        } else if (attributes.Imagen.url) {
+          processedCategory.image = {
+            url: attributes.Imagen.url,
+          };
+          console.log(`Imagen encontrada (directa): ${attributes.Imagen.url}`);
+        }
+      } else if (attributes.image) {
+        // Inglés
+        console.log(
+          "Campo 'image' encontrado:",
+          JSON.stringify(attributes.image).substring(0, 300)
+        );
+        if (attributes.image.data && attributes.image.data.attributes) {
+          const imgAttributes = attributes.image.data.attributes;
+          processedCategory.image = {
+            url: imgAttributes.url,
+            width: imgAttributes.width,
+            height: imgAttributes.height,
+          };
+          console.log(`Imagen encontrada (v4): ${imgAttributes.url}`);
+        } else if (attributes.image.url) {
+          processedCategory.image = {
+            url: attributes.image.url,
+          };
+          console.log(`Imagen encontrada (directa): ${attributes.image.url}`);
+        }
+      }
+
+      // Si después de todo esto no hay imagen, mostramos un mensaje
+      if (!processedCategory.image) {
+        console.log(
+          `No se encontró imagen para la categoría ${processedCategory.name} (ID: ${processedCategory.id})`
+        );
+      }
+
+      console.log(
+        `Procesada categoría: ${processedCategory.name} (ID: ${processedCategory.id})`
+      );
+      return processedCategory;
+    });
+
+    console.log(`Total de ${categories.length} categorías procesadas`);
+    return categories;
+  } catch (error) {
+    console.error("Error al obtener categorías:", error);
+    return [];
+  }
+}
+
+// Función para obtener productos por categoría
+export async function getProductsByCategory(
+  categoryId?: string
+): Promise<Product[]> {
+  // Siempre usamos el host desde una variable de entorno
+  const strapiHost =
+    process.env.NEXT_PUBLIC_STRAPI_HOST || "http://localhost:1337";
+  const defaultImage = "/placeholder.svg";
+  let products: Product[] = [];
+
+  console.log(`Intentando obtener productos para categoría ID: ${categoryId}`);
+
+  try {
+    // Primero intentamos obtener todos los productos con sus categorías
+    console.log(
+      `Intentando obtener todos los productos: ${strapiHost}/api/productos?populate=*`
+    );
+    const productsResponse = await fetch(
+      `${strapiHost}/api/productos?populate=*`,
+      {
+        next: { revalidate: 60 },
+      }
+    );
+
+    if (!productsResponse.ok) {
+      throw new Error("Productos en español no encontrados");
+    }
+
+    const productsData = await productsResponse.json();
+    console.log(`Datos de productos recibidos, procesando...`);
+
+    if (productsData?.data) {
+      // Procesar todos los productos
+      products = productsData.data.map((product: any) => {
+        const imageUrl = getImageUrl(
+          product?.attributes?.imagen?.data,
+          strapiHost
+        );
+
+        return {
+          id: product.id.toString(),
+          slug: product.attributes.slug || `product-${product.id}`,
+          name: product.attributes.nombre || "Producto sin nombre",
+          price: product.attributes.precio || 0,
+          description: product.attributes.descripcion || "",
+          image: imageUrl || defaultImage,
+          categories: product.attributes.categorias?.data
+            ? product.attributes.categorias.data.map((cat: any) => ({
+                id: cat.id.toString(),
+                name: cat.attributes.nombre || "Categoría sin nombre",
+                slug: cat.attributes.slug || `category-${cat.id}`,
+              }))
+            : [],
+        };
+      });
+
+      // Filtrar por categoría si se proporcionó un categoryId
+      if (categoryId) {
+        console.log(`Filtrando productos por categoría ID: ${categoryId}`);
+        products = products.filter((product) =>
+          product.categories.some((cat) => cat.id === categoryId)
+        );
+      }
+    }
+
+    return products;
+  } catch (error) {
+    console.error("Error obteniendo productos en español:", error);
+
+    try {
+      // Intentar obtener los productos en inglés como respaldo
+      console.log(
+        `Intentando obtener productos en inglés: ${strapiHost}/api/products?populate=*`
+      );
+      const productsResponse = await fetch(
+        `${strapiHost}/api/products?populate=*`,
+        {
+          next: { revalidate: 60 },
+        }
+      );
+
+      if (!productsResponse.ok) {
+        throw new Error("Productos en inglés no encontrados");
+      }
+
+      const productsData = await productsResponse.json();
+      console.log(`Datos de productos en inglés recibidos, procesando...`);
+
+      if (productsData?.data) {
+        // Procesar todos los productos
+        products = productsData.data.map((product: any) => {
+          const imageUrl = getImageUrl(
+            product?.attributes?.image?.data,
+            strapiHost
+          );
+
+          return {
+            id: product.id.toString(),
+            slug: product.attributes.slug || `product-${product.id}`,
+            name: product.attributes.name || "Producto sin nombre",
+            price: product.attributes.price || 0,
+            description: product.attributes.description || "",
+            image: imageUrl || defaultImage,
+            categories: product.attributes.categories?.data
+              ? product.attributes.categories.data.map((cat: any) => ({
+                  id: cat.id.toString(),
+                  name: cat.attributes.name || "Categoría sin nombre",
+                  slug: cat.attributes.slug || `category-${cat.id}`,
+                }))
+              : [],
+          };
+        });
+
+        // Filtrar por categoría si se proporcionó un categoryId
+        if (categoryId) {
+          console.log(`Filtrando productos por categoría ID: ${categoryId}`);
+          products = products.filter((product) =>
+            product.categories.some((cat) => cat.id === categoryId)
+          );
+        }
+      }
+
+      return products;
+    } catch (error) {
+      console.error("Error obteniendo productos en inglés:", error);
+
+      // Si fallan ambos intentos, intentamos obtener directamente la categoría con sus productos
+      if (categoryId) {
+        try {
+          console.log(
+            `Intentando obtener categoría específica: ${strapiHost}/api/categorias/${categoryId}?populate=productos.imagen`
+          );
+          const categoryResponse = await fetch(
+            `${strapiHost}/api/categorias/${categoryId}?populate=productos.imagen`,
+            {
+              next: { revalidate: 60 },
+            }
+          );
+
+          if (!categoryResponse.ok) {
+            console.log(
+              `Intentando endpoint en inglés: ${strapiHost}/api/categories/${categoryId}?populate=products.image`
+            );
+            const englishCategoryResponse = await fetch(
+              `${strapiHost}/api/categories/${categoryId}?populate=products.image`,
+              {
+                next: { revalidate: 60 },
+              }
+            );
+
+            if (!englishCategoryResponse.ok) {
+              return [];
+            }
+
+            const categoryData = await englishCategoryResponse.json();
+            if (categoryData?.data?.attributes?.products?.data) {
+              return categoryData.data.attributes.products.data.map(
+                (product: any) => {
+                  const imageUrl = getImageUrl(
+                    product?.attributes?.image?.data,
+                    strapiHost
+                  );
+
+                  return {
+                    id: product.id.toString(),
+                    slug: product.attributes.slug || `product-${product.id}`,
+                    name: product.attributes.name || "Producto sin nombre",
+                    price: product.attributes.price || 0,
+                    description: product.attributes.description || "",
+                    image: imageUrl || defaultImage,
+                    categories: [
+                      {
+                        id: categoryId,
+                        name:
+                          categoryData.data.attributes.name ||
+                          "Categoría sin nombre",
+                        slug:
+                          categoryData.data.attributes.slug ||
+                          `category-${categoryId}`,
+                      },
+                    ],
+                  };
+                }
+              );
+            }
+          } else {
+            const categoryData = await categoryResponse.json();
+            if (categoryData?.data?.attributes?.productos?.data) {
+              return categoryData.data.attributes.productos.data.map(
+                (product: any) => {
+                  const imageUrl = getImageUrl(
+                    product?.attributes?.imagen?.data,
+                    strapiHost
+                  );
+
+                  return {
+                    id: product.id.toString(),
+                    slug: product.attributes.slug || `product-${product.id}`,
+                    name: product.attributes.nombre || "Producto sin nombre",
+                    price: product.attributes.precio || 0,
+                    description: product.attributes.descripcion || "",
+                    image: imageUrl || defaultImage,
+                    categories: [
+                      {
+                        id: categoryId,
+                        name:
+                          categoryData.data.attributes.nombre ||
+                          "Categoría sin nombre",
+                        slug:
+                          categoryData.data.attributes.slug ||
+                          `category-${categoryId}`,
+                      },
+                    ],
+                  };
+                }
+              );
+            }
+          }
+        } catch (categoryError) {
+          console.error(
+            "Error obteniendo categoría específica:",
+            categoryError
+          );
+        }
+      }
+    }
+  }
+
+  return [];
+}
+
+// Función auxiliar para obtener URL de imagen
+function getImageUrl(imageData: any, strapiHost: string): string {
+  if (!imageData) return "";
+
+  // Para imágenes de Cloudinary u otros proveedores externos
+  if (
+    imageData.attributes?.url &&
+    imageData.attributes.url.startsWith("http")
+  ) {
+    return imageData.attributes.url;
+  }
+
+  // Para imágenes almacenadas en Strapi
+  if (imageData.attributes?.url) {
+    return `${strapiHost}${imageData.attributes.url}`;
+  }
+
+  return "";
+}
+
+export async function getDiscountedProducts() {
+  try {
+    const strapiHost =
+      process.env.NEXT_PUBLIC_STRAPI_HOST || "http://localhost:1337";
+    const strapiToken = process.env.NEXT_PUBLIC_STRAPI_TOKEN;
+
+    console.log("Buscando productos con descuento...");
+
+    // Intentar diferentes estructuras de campo para descuentos
+    const endpoints = [
+      // Variantes en español
+      `${strapiHost}/api/productos?filters[precioDescuento][$notNull]=true&populate=*`,
+      `${strapiHost}/api/productos?filters[PrecioDescuento][$notNull]=true&populate=*`,
+
+      // Variantes en inglés
+      `${strapiHost}/api/products?filters[discountPrice][$notNull]=true&populate=*`,
+      `${strapiHost}/api/products?filters[DiscountPrice][$notNull]=true&populate=*`,
+    ];
+
+    let rawProducts = [];
+
+    for (const endpoint of endpoints) {
+      try {
+        const response = await fetch(endpoint, {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${strapiToken}`,
+          },
+          cache: "no-store",
+        });
+
+        if (!response.ok) {
+          console.log(
+            `Endpoint ${endpoint} failed with status: ${response.status}`
+          );
+          continue;
+        }
+
+        const data = await response.json();
+
+        if (data?.data && Array.isArray(data.data) && data.data.length > 0) {
+          rawProducts = data.data;
+          console.log(
+            `Found ${rawProducts.length} discounted products from ${endpoint}`
+          );
+          break;
+        }
+      } catch (error) {
+        console.log(`Error with endpoint ${endpoint}:`, error);
+      }
+    }
+
+    if (rawProducts.length === 0) {
+      console.log("No discounted products found");
+      return [];
+    }
+
+    // Procesar los productos
+    const processedProducts = rawProducts.map((product) => {
+      const attributes = product.attributes || {};
+
+      const processedProduct = {
+        id: product.id,
+        name:
+          attributes.Nombre ||
+          attributes.nombre ||
+          attributes.Name ||
+          attributes.name ||
+          "Producto sin nombre",
+        description:
+          attributes.Descripcion ||
+          attributes.descripcion ||
+          attributes.Description ||
+          attributes.description ||
+          "",
+        price:
+          attributes.Precio ||
+          attributes.precio ||
+          attributes.Price ||
+          attributes.price ||
+          0,
+        discountPrice:
+          attributes.PrecioDescuento ||
+          attributes.precioDescuento ||
+          attributes.DiscountPrice ||
+          attributes.discountPrice ||
+          null,
+        stock: attributes.Stock || attributes.stock || 0,
+        image: null,
+      };
+
+      // Procesar imagen
+      if (
+        attributes.Imagen &&
+        attributes.Imagen.data &&
+        attributes.Imagen.data.attributes
+      ) {
+        const imgUrl = attributes.Imagen.data.attributes.url;
+        processedProduct.image = {
+          url: imgUrl,
+        };
+      } else if (
+        attributes.imagen &&
+        attributes.imagen.data &&
+        attributes.imagen.data.attributes
+      ) {
+        const imgUrl = attributes.imagen.data.attributes.url;
+        processedProduct.image = {
+          url: imgUrl,
+        };
+      } else if (
+        attributes.image &&
+        attributes.image.data &&
+        attributes.image.data.attributes
+      ) {
+        const imgUrl = attributes.image.data.attributes.url;
+        processedProduct.image = {
+          url: imgUrl,
+        };
+      }
+
+      return processedProduct;
+    });
+
+    console.log(`Processed ${processedProducts.length} discounted products`);
+    return processedProducts;
+  } catch (error) {
+    console.error("Error fetching discounted products:", error);
+    return [];
+  }
+}
+
+export async function getProductsForHome(): Promise<Product[]> {
+  try {
+    const strapiHost =
+      process.env.NEXT_PUBLIC_STRAPI_HOST || "http://localhost:1337";
+    const strapiToken = process.env.NEXT_PUBLIC_STRAPI_TOKEN;
+
+    console.log("Obteniendo productos para home");
+
+    const response = await fetch(
+      `${strapiHost}/api/productos?populate=imagen,categories,precios`,
+      {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${strapiToken}`,
+        },
+        cache: "no-store",
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Error al obtener productos: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log(
+      "Datos productos recibidos:",
+      JSON.stringify(data).substring(0, 500)
+    );
+
+    if (!data || !data.data) {
+      console.error("Estructura de datos de productos inválida:", data);
+      return [];
+    }
+
+    const products = data.data.map((product: any) => {
+      // Intentar obtener datos tanto del producto principal como de sus atributos
+      const attributes = product.attributes || {};
+      console.log(`Procesando producto: ${product.id}`);
+
+      // Extraer categorías del producto
+      let categories: Category[] = [];
+      if (product.categories || attributes.categories) {
+        const categoriesData =
+          product.categories?.data || attributes.categories?.data || [];
+        categories = categoriesData.map((cat: any) => {
+          const catAttributes = cat.attributes || {};
+          return {
+            id: cat.id,
+            name:
+              cat.nombre ||
+              catAttributes.nombre ||
+              cat.name ||
+              catAttributes.name ||
+              "",
+            slug: cat.slug || catAttributes.slug || "",
+          };
+        });
+      }
+
+      // Procesar imagen
+      let image = null;
+      if (product.imagen) {
+        console.log("Imagen encontrada directamente en producto");
+        if (typeof product.imagen === "string") {
+          image = { url: product.imagen };
+        } else if (product.imagen?.data?.attributes?.url) {
+          const imgAttributes = product.imagen.data.attributes;
+          image = {
+            url: imgAttributes.url,
+            width: imgAttributes.width,
+            height: imgAttributes.height,
+          };
+        } else if (product.imagen?.url) {
+          image = { url: product.imagen.url };
+        }
+      } else if (attributes.imagen) {
+        console.log("Imagen encontrada en attributes");
+        if (attributes.imagen.data && attributes.imagen.data.attributes) {
+          const imgAttributes = attributes.imagen.data.attributes;
+          image = {
+            url: imgAttributes.url,
+            width: imgAttributes.width,
+            height: imgAttributes.height,
+          };
+        }
+      }
+
+      // Procesar precios
+      let prices: Price[] = [];
+      if (product.precios || attributes.precios) {
+        const preciosData =
+          product.precios?.data || attributes.precios?.data || [];
+        prices = preciosData.map((price: any) => {
+          const priceAttrs = price.attributes || {};
+          return {
+            id: price.id,
+            size:
+              price.tamano ||
+              priceAttrs.tamano ||
+              price.size ||
+              priceAttrs.size ||
+              "",
+            price:
+              price.precio ||
+              priceAttrs.precio ||
+              price.price ||
+              priceAttrs.price ||
+              0,
+          };
+        });
+      }
+
+      return {
+        id: product.id,
+        name:
+          product.nombre ||
+          attributes.nombre ||
+          product.name ||
+          attributes.name ||
+          "",
+        slug: product.slug || attributes.slug || "",
+        description:
+          product.descripcion ||
+          attributes.descripcion ||
+          product.description ||
+          attributes.description ||
+          "",
+        image: image,
+        categories: categories,
+        prices: prices,
+      };
+    });
+
+    console.log(`Productos procesados: ${products.length}`);
+    return products;
+  } catch (error) {
+    console.error("Error obteniendo productos:", error);
+    return [];
+  }
+}
