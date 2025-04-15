@@ -30,6 +30,7 @@ export interface Price {
   id: number;
   size: string;
   price: number;
+  discountPrice?: number; // Precio con descuento (opcional)
 }
 
 /**

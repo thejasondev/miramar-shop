@@ -1,18 +1,35 @@
 {
   "version": 2,
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "devCommand": "npm run develop",
   "builds": [
     {
-      "src": "package.json",
+      "src": "dist/server.js",
       "use": "@vercel/node"
     }
   ],
   "routes": [
     {
+      "src": "/uploads/(.+)",
+      "dest": "/dist/server.js"
+    },
+    {
+      "src": "/api/(.*)",
+      "dest": "/dist/server.js"
+    },
+    {
+      "src": "/admin/(.*)",
+      "dest": "/dist/server.js"
+    },
+    {
       "src": "/(.*)",
-      "dest": "/"
+      "dest": "/dist/server.js"
     }
   ],
   "env": {
-    "NODE_ENV": "production"
+    "NODE_ENV": "production",
+    "PUBLIC_URL": "${SERVER_URL}",
+    "NODE_OPTIONS": "--max-old-space-size=4096"
   }
 } 

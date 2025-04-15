@@ -23,44 +23,114 @@ export async function getProductsByCategory(
       return await fetchAndProcessProducts(endpoint);
     }
 
-    // Si tenemos ID, probar con diferentes variantes de nombres de campo para la relación
-    const possibleEndpoints = [
-      // Variante 1: categorias (más común)
-      `${strapiHost}/api/productos?populate=*&filters[categorias][id][$eq]=${categoryId}`,
+    // MÉTODO PRINCIPAL: Obtener las categorías con sus productos
+    try {
+      // Usamos populate=* para incluir todas las relaciones, incluido cover del producto
+      const categoriesEndpoint = `${strapiHost}/api/categories?populate[products][populate]=cover&populate=cover`;
+      console.log(`Obteniendo categorías con productos: ${categoriesEndpoint}`);
 
-      // Variante 2: categoria (singular)
-      `${strapiHost}/api/productos?populate=*&filters[categoria][id][$eq]=${categoryId}`,
+      const response = await fetch(categoriesEndpoint, getStrapiFetchOptions());
 
-      // Variante 3: categories (inglés)
-      `${strapiHost}/api/productos?populate=*&filters[categories][id][$eq]=${categoryId}`,
+      if (response.ok) {
+        const data = await response.json();
+        console.log(`✅ Éxito obteniendo categorías con productos`);
 
-      // Variante 4: category (inglés singular)
-      `${strapiHost}/api/productos?populate=*&filters[category][id][$eq]=${categoryId}`,
-
-      // Variante 5: Usando populate directo sin filtro (como respaldo)
-      `${strapiHost}/api/productos?populate=categorias,imagen`,
-    ];
-
-    // Intentar cada endpoint
-    for (const endpoint of possibleEndpoints) {
-      console.log(`Intentando consultar: ${endpoint}`);
-      const products = await fetchAndProcessProducts(endpoint);
-
-      // Si encontramos productos, filtrar manualmente para asegurar que pertenecen a la categoría
-      if (products.length > 0) {
-        const filteredProducts = products.filter((product) =>
-          product.categories.some((cat) => cat.id.toString() === categoryId)
+        // Buscar la categoría específica
+        const categories = data.data || [];
+        const targetCategory = categories.find(
+          (cat: any) => cat.id.toString() === categoryId
         );
 
-        if (filteredProducts.length > 0) {
+        if (targetCategory) {
           console.log(
-            `✅ Encontrados ${filteredProducts.length} productos para categoría ${categoryId}`
+            `✅ Encontrada categoría ID ${categoryId}: ${targetCategory.name}`
           );
-          return filteredProducts;
+          console.log(
+            `Datos de categoría: ${JSON.stringify(targetCategory, null, 2)}`
+          );
+
+          // Verificar si tiene productos asociados
+          const products = targetCategory.products || [];
+          console.log(
+            `La categoría tiene ${products.length} productos asociados`
+          );
+
+          if (products.length > 0) {
+            // Procesar los productos de la categoría
+            const processedProducts: Product[] = products.map(
+              (product: any) => {
+                console.log(
+                  `Procesando producto: ${product.name || product.id}`
+                );
+                console.log(
+                  `Datos del producto: ${JSON.stringify(product, null, 2)}`
+                );
+
+                // Intentamos usar la imagen del producto si existe
+                let productImage = null;
+
+                // Verificar si el producto tiene imagen propia
+                if (product.cover && product.cover.url) {
+                  console.log(
+                    `Producto tiene su propia imagen: ${product.cover.url}`
+                  );
+                  productImage = {
+                    url: product.cover.url,
+                    width: product.cover.width || 800,
+                    height: product.cover.height || 600,
+                  };
+                } else {
+                  // Si no tiene imagen propia, usar la de la categoría como respaldo
+                  console.log(
+                    `Producto no tiene imagen propia, usando la de la categoría`
+                  );
+                  if (targetCategory.cover && targetCategory.cover.url) {
+                    productImage = {
+                      url: targetCategory.cover.url,
+                      width: targetCategory.cover.width || 800,
+                      height: targetCategory.cover.height || 600,
+                    };
+                  }
+                }
+
+                // Crear objeto de producto con la estructura correcta
+                return {
+                  id: product.id,
+                  name: product.name,
+                  slug: product.slug || `producto-${product.id}`,
+                  description: product.description || "",
+                  image: productImage,
+                  categories: [
+                    {
+                      id: parseInt(categoryId),
+                      name: targetCategory.name || "Categoría",
+                      slug: targetCategory.slug || `categoria-${categoryId}`,
+                    },
+                  ],
+                  prices: [
+                    {
+                      id: 1,
+                      size: "Único",
+                      price: product.price || 0,
+                      discountPrice: product.discountPrice || 0,
+                    },
+                  ],
+                };
+              }
+            );
+
+            console.log(
+              `✅ Procesados ${processedProducts.length} productos de categoría ${targetCategory.name}`
+            );
+            return processedProducts;
+          }
         }
       }
+    } catch (error) {
+      console.error("Error obteniendo categorías con productos:", error);
     }
 
+    // Si no se encontraron productos, devolver array vacío
     console.log(`No se encontraron productos para la categoría ${categoryId}`);
     return [];
   } catch (error) {
@@ -101,7 +171,15 @@ async function fetchAndProcessProducts(endpoint: string): Promise<Product[]> {
         description: attributes.descripcion || "",
         image: null,
         categories: [],
-        prices: [],
+        prices: [
+          {
+            id: 1,
+            size: "Único",
+            price: attributes.precio || attributes.price || 0,
+            discountPrice:
+              attributes.descuento || attributes.discountPrice || 0,
+          },
+        ],
       };
 
       // Procesar imagen
@@ -242,8 +320,21 @@ export async function getProductsForHome(): Promise<Product[]> {
             id: price.id,
             size: priceAttrs.tamano || priceAttrs.size || "",
             price: priceAttrs.precio || priceAttrs.price || 0,
+            discountPrice:
+              priceAttrs.descuento || priceAttrs.discountPrice || 0,
           };
         });
+      } else {
+        // Si no hay precios en el objeto precios, usar el precio directo del producto
+        prices = [
+          {
+            id: 1,
+            size: "Único",
+            price: attributes.precio || attributes.price || 0,
+            discountPrice:
+              attributes.descuento || attributes.discountPrice || 0,
+          },
+        ];
       }
 
       // Crear el objeto producto
@@ -270,91 +361,112 @@ export async function getProductsForHome(): Promise<Product[]> {
  * Obtiene productos con descuento
  */
 export async function getDiscountedProducts(): Promise<Product[]> {
+  const strapiHost = getStrapiHost();
+  console.log("Obteniendo productos con descuento...");
+
   try {
-    const strapiHost = getStrapiHost();
-    console.log("Buscando productos con descuento...");
+    // 1. Hacer la petición a Strapi
+    const url = `${strapiHost}/api/products?filters[discountPrice][$notNull]=true&populate=*`;
+    console.log(`Consultando: ${url}`);
 
-    // Intentar diferentes estructuras de campo para descuentos
-    const endpoints = [
-      // Variantes en español
-      `${strapiHost}/api/productos?filters[precioDescuento][$notNull]=true&populate=*`,
-      `${strapiHost}/api/productos?filters[PrecioDescuento][$notNull]=true&populate=*`,
+    const response = await fetch(url, getStrapiFetchOptions());
 
-      // Variantes en inglés
-      `${strapiHost}/api/products?filters[discountPrice][$notNull]=true&populate=*`,
-      `${strapiHost}/api/products?filters[DiscountPrice][$notNull]=true&populate=*`,
-    ];
-
-    let discountedProducts: any[] = [];
-
-    // Intentar cada endpoint hasta encontrar uno que funcione
-    for (const endpoint of endpoints) {
-      try {
-        const response = await fetch(endpoint, getStrapiFetchOptions());
-
-        if (!response.ok) {
-          console.log(
-            `Endpoint ${endpoint} failed with status: ${response.status}`
-          );
-          continue;
-        }
-
-        const data = await response.json();
-        if (data?.data && Array.isArray(data.data) && data.data.length > 0) {
-          discountedProducts = data.data;
-          console.log(
-            `Found ${discountedProducts.length} discounted products from ${endpoint}`
-          );
-          break;
-        }
-      } catch (error) {
-        console.log(`Error with endpoint ${endpoint}:`, error);
-      }
+    if (!response.ok) {
+      throw new Error(`Error ${response.status}: ${response.statusText}`);
     }
 
-    if (discountedProducts.length === 0) {
-      console.log("No discounted products found");
+    // 2. Procesar la respuesta
+    const responseData = await response.json();
+
+    // 3. Validar que hay datos
+    if (
+      !responseData.data ||
+      !Array.isArray(responseData.data) ||
+      responseData.data.length === 0
+    ) {
+      console.log("No se encontraron productos con descuento");
       return [];
     }
 
-    // Procesar los productos
-    const products = discountedProducts.map((product) => {
-      const attributes = product.attributes || {};
+    console.log(
+      `Se encontraron ${responseData.data.length} productos con descuento`
+    );
 
-      // Extraer datos básicos
+    // Imprimir la estructura completa del primer producto para diagnóstico
+    if (responseData.data.length > 0) {
+      const firstProduct = responseData.data[0];
+      console.log("Estructura completa del primer producto:");
+      console.log(JSON.stringify(firstProduct, null, 2));
+    }
+
+    // 4. Mapear los datos - IMPORTANTE: Los datos vienen directamente en el objeto, no en attributes
+    const products = responseData.data.map((product) => {
+      // Extraer datos básicos - Acceso directo porque no están en attributes
       const id = product.id;
-      const name =
-        attributes.nombre || attributes.name || "Producto sin nombre";
-      const description =
-        attributes.descripcion || attributes.description || "";
-      const price = attributes.precio || attributes.price || 0;
+      const name = product.name || "Producto sin nombre"; // Acceso directo
+      const description = product.description || ""; // Acceso directo
+      const price = product.price || 0; // Acceso directo
+      const discountPrice = product.discountPrice || 0; // Acceso directo
 
-      // Procesar imagen
-      const image =
-        processImage(attributes.imagen) || processImage(attributes.image);
+      console.log(`Procesando producto con descuento: ${name} (ID: ${id})`);
+      console.log(
+        `Precio original: ${price}, Precio con descuento: ${discountPrice}`
+      );
 
-      // Devolver producto procesado
+      // Procesar imagen - El objeto cover está directamente en el producto
+      let image = null;
+
+      if (product.cover && product.cover.url) {
+        image = {
+          url: product.cover.url,
+          width: product.cover.width || 800,
+          height: product.cover.height || 600,
+        };
+        console.log(`Imagen encontrada: ${image.url}`);
+      }
+
+      // Crear producto con estructura correcta
       return {
         id,
         name,
-        slug: attributes.slug || `producto-${id}`,
+        slug: `producto-${id}`,
         description,
         image,
-        categories: [], // Por simplicidad no procesamos categorías aquí
+        categories: product.category
+          ? [
+              {
+                id: product.category.id,
+                name: product.category.name || "Categoría",
+                slug: `categoria-${product.category.id}`,
+              },
+            ]
+          : [],
         prices: [
           {
             id: 1,
             size: "Único",
             price,
+            discountPrice,
           },
         ],
       };
     });
 
-    console.log(`Processed ${products.length} discounted products`);
+    // Verificar los productos procesados
+    console.log("Productos procesados correctamente:");
+    products.forEach((p) => {
+      console.log(`- ${p.name} (ID: ${p.id}):`);
+      console.log(`  • Precio original: $${p.prices[0].price}`);
+      console.log(`  • Precio descuento: $${p.prices[0].discountPrice}`);
+      console.log(`  • Tiene imagen: ${p.image ? "SÍ" : "NO"}`);
+      if (p.image) {
+        console.log(`  • URL imagen: ${p.image.url}`);
+      }
+    });
+
     return products;
   } catch (error) {
-    console.error("Error fetching discounted products:", error);
+    console.error("Error obteniendo productos con descuento:", error);
     return [];
   }
 }

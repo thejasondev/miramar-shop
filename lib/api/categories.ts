@@ -11,7 +11,6 @@ export async function getCategories(): Promise<Category[]> {
 
     // Intentar diferentes nombres posibles de colección, empezando por el más probable
     const possibleEndpoints = [
-      `${strapiHost}/api/categorias?populate=*`,
       `${strapiHost}/api/categories?populate=*`,
       `${strapiHost}/api/category?populate=*`,
       `${strapiHost}/api/categoria?populate=*`,
@@ -46,14 +45,25 @@ export async function getCategories(): Promise<Category[]> {
     }
 
     console.log(`Categorías encontradas en: ${successEndpoint}`);
+    console.log("Estructura de datos recibida:", JSON.stringify(data, null, 2));
 
-    if (!data.data) {
-      console.error("Respuesta sin propiedad 'data':", data);
+    if (!data.data && !Array.isArray(data)) {
+      console.error("Respuesta sin propiedad 'data' o no es un array:", data);
+      return [];
+    }
+
+    // La respuesta puede estar directamente en data o ser data en sí mismo
+    const items = data.data || data;
+
+    if (!Array.isArray(items)) {
+      console.error("Los datos no son un array:", items);
       return [];
     }
 
     // Transformar los datos para que coincidan con la estructura esperada
-    const categories = data.data.map((category: any) => {
+    const categories = items.map((category: any) => {
+      console.log("Procesando categoría:", category);
+
       // Los datos pueden estar directamente en el objeto o en attributes
       const attributes = category.attributes || {};
 
@@ -92,7 +102,9 @@ export async function getCategories(): Promise<Category[]> {
         processImage(category.imagen) ||
         processImage(attributes.imagen) ||
         processImage(category.image) ||
-        processImage(attributes.image);
+        processImage(attributes.image) ||
+        processImage(category.cover) ||
+        processImage(attributes.cover);
 
       if (image) {
         processedCategory.image = image;

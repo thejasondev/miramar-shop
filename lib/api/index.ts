@@ -22,3 +22,6 @@ export * from "./home";
 
 // Exportar funciones de FAQs
 export * from "./faqs";
+
+// Exportar funciones de depuración
+export * from "./debug";

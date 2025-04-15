@@ -1,6 +1,7 @@
 import { getStrapiHost, getStrapiFetchOptions } from "./config";
 import { HomeContent, ImageType } from "./types";
 import { processImage, truncateString } from "./utils";
+import { getCategories } from "./categories"; // Importar para usar como fallback
 
 /**
  * Obtiene el contenido de la página principal
@@ -10,27 +11,93 @@ export async function getHomeContent(): Promise<HomeContent> {
     const strapiHost = getStrapiHost();
     console.log("Using STRAPI_HOST:", strapiHost);
 
-    const response = await fetch(
+    // Posibles endpoints para la colección home
+    const possibleEndpoints = [
       `${strapiHost}/api/home?populate=*`,
-      getStrapiFetchOptions()
+      `${strapiHost}/api/homepage?populate=*`,
+      `${strapiHost}/api/inicio?populate=*`,
+      `${strapiHost}/api/pagina-inicio?populate=*`,
+    ];
+
+    let data = null;
+    let successEndpoint = "";
+
+    // Intenta cada endpoint hasta que uno funcione
+    for (const endpoint of possibleEndpoints) {
+      try {
+        console.log(`Intentando obtener contenido desde: ${endpoint}`);
+        const response = await fetch(endpoint, getStrapiFetchOptions());
+
+        if (response.ok) {
+          data = await response.json();
+          successEndpoint = endpoint;
+          console.log(`✅ Éxito al obtener home desde: ${endpoint}`);
+          break;
+        } else {
+          console.log(`❌ Error ${response.status} al intentar: ${endpoint}`);
+        }
+      } catch (error) {
+        console.log(`Error al intentar ${endpoint}:`, error);
+      }
+    }
+
+    // Si no se pudo obtener el contenido de home, intentar usar la primera categoría como fallback
+    if (!data) {
+      console.log(
+        "Intentando obtener contenido desde categorías como fallback..."
+      );
+      try {
+        // Obtener categorías para usar la primera como home si está disponible
+        const categories = await getCategories();
+        if (categories && categories.length > 0) {
+          const firstCategory = categories[0];
+          console.log(
+            `✅ Usando la categoría "${firstCategory.name}" como fallback para home`
+          );
+
+          return {
+            title: "Miramar Shop",
+            description: `Explora nuestra colección de ${firstCategory.name} y más productos`,
+            cover: firstCategory.image,
+          };
+        }
+      } catch (error) {
+        console.log("Error al intentar usar categorías como fallback:", error);
+      }
+
+      console.log(
+        "No se pudo obtener contenido de ninguna fuente, usando valores por defecto"
+      );
+      return {
+        title: "Miramar Shop",
+        description: "Tu tienda online favorita",
+        cover: null,
+      };
+    }
+
+    console.log(
+      "Home content raw structure:",
+      data.data ? "Tiene data" : "No tiene data",
+      data.attributes ? "Tiene attributes" : "No tiene attributes"
     );
 
-    if (!response.ok) {
-      throw new Error(`Error fetching home content: ${response.status}`);
+    // Extraer los datos según la estructura disponible
+    let homeData;
+    if (data.data && data.data.attributes) {
+      // Estructura normal de Strapi v4
+      homeData = data.data.attributes;
+    } else if (data.attributes) {
+      // Directamente en attributes
+      homeData = data.attributes;
+    } else if (data.data) {
+      // Directamente en data
+      homeData = data.data;
+    } else {
+      // Usar el objeto completo como último recurso
+      homeData = data;
     }
 
-    const data = await response.json();
-    console.log("Home content raw data:", truncateString(JSON.stringify(data)));
-
-    // Verificar la estructura de los datos
-    if (!data || !data.data) {
-      console.error("Invalid data structure from Strapi:", data);
-      throw new Error("Invalid data structure from Strapi");
-    }
-
-    // Extraer los datos de la respuesta
-    const homeData = data.data.attributes || data.data;
-    console.log("Home data fields:", Object.keys(homeData));
+    console.log("Home data fields encontrados:", Object.keys(homeData));
 
     // Procesar y sacar la URL de la imagen correctamente
     let coverImage: ImageType | null = null;
@@ -69,7 +136,7 @@ export async function getHomeContent(): Promise<HomeContent> {
     };
   } catch (error) {
     console.error("Error fetching home content:", error);
-    // Devolver un objeto vacío con la estructura esperada
+    // Devolver un objeto con valores por defecto
     return {
       title: "Miramar Shop",
       description: "Tu tienda online favorita",
