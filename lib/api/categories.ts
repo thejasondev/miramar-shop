@@ -13,7 +13,6 @@ export async function getCategories(): Promise<Category[]> {
     const possibleEndpoints = [
       `${strapiHost}/api/categories?populate=*`,
       `${strapiHost}/api/category?populate=*`,
-      `${strapiHost}/api/categoria?populate=*`,
     ];
 
     let data = null;

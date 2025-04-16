@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: miramar-shop-backend
+    env: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm run start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: HOST
+        value: 0.0.0.0
+      - key: PORT
+        value: 10000
+      - key: DATABASE_CLIENT
+        value: postgres
+      - key: FRONTEND_URL
+        value: https://miramar-shop.vercel.app
+      - key: SERVER_URL
+        fromService:
+          type: web
+          name: miramar-shop-backend
+          envVarKey: RENDER_EXTERNAL_URL

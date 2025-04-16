@@ -14,9 +14,6 @@ export async function getHomeContent(): Promise<HomeContent> {
     // Posibles endpoints para la colección home
     const possibleEndpoints = [
       `${strapiHost}/api/home?populate=*`,
-      `${strapiHost}/api/homepage?populate=*`,
-      `${strapiHost}/api/inicio?populate=*`,
-      `${strapiHost}/api/pagina-inicio?populate=*`,
     ];
 
     let data = null;
